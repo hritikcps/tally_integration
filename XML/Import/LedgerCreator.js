@@ -61,7 +61,6 @@ class LedgerCreator {
 
             console.log("createLedger XML Response:", response.data);
 
-            // Check for exceptions in the XML response
             if (response.data.includes("<LINEERROR>")) {
                 throw new Error(`Create ledger failed: ${response.data}`);
             } else {

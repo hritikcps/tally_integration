@@ -5,11 +5,13 @@ async function main() {
     const ledgerCreator = new LedgerCreator();
     const paymentVoucherCreator = new PaymentVoucherCreator();
 
-    const date = "20240401";
+    const date = "20240501";
     const bankName = "IDFC Bank";
-    const narration = "Payment for watch from IDFC Bank";
-    const amount = 40000.0;
-    const ledgerName = "Bank";
+    const voucherNumber = "PV004";
+    const partyLedgerName = "Bank Accounts";
+    const narration = "Payment for qwerty from IDFC Bank";
+    const amount = 3000.0;
+    const ledgerName = "qwerty";
     const ledgerGroup = "Fixed Assets";
     const company = "Cp";
 
@@ -20,8 +22,8 @@ async function main() {
         // Create payment voucher
         await paymentVoucherCreator.createPaymentVoucher(
             date,
-            "PV006",
-            "Bank Accounts",
+            voucherNumber,
+            partyLedgerName,
             narration,
             amount,
             ledgerName
