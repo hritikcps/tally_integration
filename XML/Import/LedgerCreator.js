@@ -1,76 +1,78 @@
-const axios = require('axios');
+const axios = require("axios");
+const xml2js = require("xml2js");
 
-class LedgerCreator {
-    constructor(tallyURL = "http://localhost:9000") {
-        this.tallyURL = tallyURL;
+// // Usage
+// const account = "Cash";
+// const date = "20240401";
+// const bankName = "Cash";
+// const narration = "Payment for watch from IDFC Bank";
+// const amount = 400.0;
+// const ledgerName = "Bank";
+// const ledgerGroup = "Fixed Assets";
+// const company = "CpS";
+
+
+async function createLedger(data) {
+  // Extract the nested ledgerData object
+  const ledgerData = data.ledgerData;
+
+  // Log the extracted ledgerData object
+  console.log("ledgerData:", JSON.stringify(ledgerData, null, 2));
+
+  // Destructure the required properties from the nested ledgerData object
+  const { ledgerName, ledgerGroup } = ledgerData;
+
+  console.log("ledgerName:", ledgerName);
+  console.log("ledgerGroup:", ledgerGroup);
+
+  const tallyURL = "http://localhost:9000";
+  const xmlRequest = `
+  <ENVELOPE>
+      <HEADER>
+          <TALLYREQUEST>Import Data</TALLYREQUEST>
+      </HEADER>
+      <BODY>
+          <IMPORTDATA>
+              <REQUESTDESC>
+                  <REPORTNAME>All Masters</REPORTNAME>
+              </REQUESTDESC>
+              <REQUESTDATA>
+                  <TALLYMESSAGE xmlns:UDF="TallyUDF">
+                      <LEDGER NAME="${ledgerName}" RESERVEDNAME="">
+                          <NAME.LIST>
+                              <NAME>${ledgerName}</NAME>
+                          </NAME.LIST>
+                          <PARENT>${ledgerGroup}</PARENT>
+                          <ISBILLWISEON>Yes</ISBILLWISEON>
+                      </LEDGER>
+                  </TALLYMESSAGE>
+              </REQUESTDATA>
+          </IMPORTDATA>
+      </BODY>
+  </ENVELOPE>`;
+
+
+
+  try {
+    const response = await axios.post(tallyURL, xmlRequest, {
+      headers: {
+        "Content-Type": "application/xml",
+      },
+    });
+
+    const result = await xml2js.parseStringPromise(response.data);
+    console.log("createLedger:", JSON.stringify(result, null, 2));
+
+    if (result.ENVELOPE.BODY[0].DATA[0].LINEERROR) {
+      throw new Error(
+        `Create ledger failed: ${result.ENVELOPE.BODY[0].DATA[0].LINEERROR[0]}`
+      );
+    } else {
+      console.log("Ledger created successfully.");
     }
-
-    async createLedger(ledgerName, ledgerGroup, company) {
-        const xmlRequest = `    
-        <ENVELOPE>
-            <HEADER>
-                <TALLYREQUEST>Import Data</TALLYREQUEST>
-            </HEADER>
-            <BODY>
-                <IMPORTDATA>
-                    <REQUESTDESC>
-                        <REPORTNAME>All Masters</REPORTNAME>
-                        <STATICVARIABLES>
-                            <SVCURRENTCOMPANY>${company}</SVCURRENTCOMPANY>
-                        </STATICVARIABLES>
-                    </REQUESTDESC>
-                    <REQUESTDATA>
-                        <TALLYMESSAGE xmlns:UDF="TallyUDF">
-                            <LEDGER NAME="${ledgerName}" ACTION="Create">
-                                <PARENT>${ledgerGroup}</PARENT>
-                                <ADDRESS.LIST TYPE="String">
-                                    <ADDRESS></ADDRESS>
-                                </ADDRESS.LIST>
-                                <MAILINGNAME.LIST TYPE="String">
-                                    <MAILINGNAME>${ledgerName}</MAILINGNAME>
-                                </MAILINGNAME.LIST>
-                                <OLDAUDITENTRYIDS.LIST TYPE="Number">
-                                    <OLDAUDITENTRYIDS>-1</OLDAUDITENTRYIDS>
-                                </OLDAUDITENTRYIDS.LIST>
-                                <GSTAPPLICABLE>&#4; Applicable</GSTAPPLICABLE>
-                                <ISBILLWISEON>No</ISBILLWISEON>
-                                <ISINTERESTON>No</ISINTERESTON>
-                                <ISCOSTCENTRESON>No</ISCOSTCENTRESON>
-                                <ISFORJOBWORKIN>No</ISFORJOBWORKIN>
-                                <ISFORJOBCOSTING>No</ISFORJOBCOSTING>
-                                <ISFORPAYROLL>No</ISFORPAYROLL>
-                                <LANGUAGENAME.LIST>
-                                    <NAME.LIST TYPE="String">
-                                        <NAME>${ledgerName}</NAME>
-                                    </NAME.LIST>
-                                    <LANGUAGEID>1033</LANGUAGEID>
-                                </LANGUAGENAME.LIST>
-                            </LEDGER>
-                        </TALLYMESSAGE>
-                    </REQUESTDATA>
-                </IMPORTDATA>
-            </BODY>
-        </ENVELOPE>`;
-
-        try {
-            const response = await axios.post(this.tallyURL, xmlRequest, {
-                headers: {
-                    "Content-Type": "application/xml",
-                },
-            });
-
-            console.log("createLedger XML Response:", response.data);
-
-            if (response.data.includes("<LINEERROR>")) {
-                throw new Error(`Create ledger failed: ${response.data}`);
-            } else {
-                console.log("Ledger created successfully.");
-            }
-        } catch (error) {
-            console.error("Error:", error);
-            throw error;
-        }
-    }
+  } catch (error) {
+    console.error("Error:", error.message || error);
+  }
 }
 
-module.exports = LedgerCreator;
+module.exports = { createLedger };
